@@ -299,18 +299,35 @@ async function handleTransactionSubmit(event) {
 }
 
 function addLocalTransaction(payload) {
-  ensureTransactionSetup(payload.type, payload.categoryId, payload.accountId);
+  ensureTransactionSetup(payload);
   state.data.transactions.unshift({ id: nextId(state.data.transactions), ...payload });
   recalculateAccountBalances();
   persistLocalState();
 }
 
-function ensureTransactionSetup(type, categoryId, accountId) {
-  const category = findCategory(categoryId);
-  const account = findAccount(accountId);
+function ensureTransactionSetup(payload) {
+  const category = findCategory(payload.categoryId);
+  const account = findAccount(payload.accountId);
   if (!account) throw new Error("Please add an account before recording a transaction.");
   if (!category) throw new Error("Please add a category before recording a transaction.");
-  if (category.type !== type) throw new Error("Transaction type must match the selected category.");
+  if (category.type !== payload.type) throw new Error("Transaction type must match the selected category.");
+
+  if (payload.type === "EXPENSE" && category.defaultLimit > 0) {
+    const month = payload.date.toString().slice(0, 7);
+    const spentThisMonth = state.data.transactions
+      .filter((entry) =>
+        entry.type === "EXPENSE" &&
+        entry.categoryId === category.id &&
+        entry.date.toString().slice(0, 7) === month
+      )
+      .reduce((sum, entry) => sum + entry.amount, 0);
+
+    if (spentThisMonth + payload.amount > category.defaultLimit) {
+      throw new Error(
+        `Category limit exceeded: ${category.name} limit is ${formatCurrency(category.defaultLimit)}, already spent ${formatCurrency(spentThisMonth)} for ${month}.`
+      );
+    }
+  }
 }
 
 function render() {
