@@ -75,7 +75,73 @@
         <div class="setup-panel">
           <div class="panel-headline">
             <h3>Setup Tracker</h3>
-            <span class="section-note">Add your profile, accounts, and categories before logging transactions.</span>
+            <span class="section-note">Create a profile or sign in first. Each profile keeps its own finance history.</span>
+          </div>
+
+          <div class="auth-grid">
+            <form id="signin-form" class="support-form">
+              <div class="panel-headline">
+                <h3>Sign In</h3>
+              </div>
+              <div class="support-form-body">
+                <label>
+                  <span>Username</span>
+                  <input type="text" name="signinUsername" maxlength="40" placeholder="Enter username" required>
+                </label>
+                <label>
+                  <span>Password</span>
+                  <input type="password" name="signinPassword" maxlength="80" placeholder="Enter password" required>
+                </label>
+              </div>
+              <button class="ghost-button block-button" type="submit">Sign In</button>
+            </form>
+
+            <form id="signup-form" class="support-form">
+              <div class="panel-headline">
+                <h3>Create Profile</h3>
+              </div>
+              <div class="support-form-body">
+                <label>
+                  <span>Full Name</span>
+                  <input type="text" name="signupName" maxlength="80" placeholder="Enter your name" required>
+                </label>
+                <div class="form-row">
+                  <label>
+                    <span>Username</span>
+                    <input type="text" name="signupUsername" maxlength="40" placeholder="Unique username" required>
+                  </label>
+                  <label>
+                    <span>Currency</span>
+                    <select name="signupCurrency" required>
+                      <option value="INR">INR</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                    </select>
+                  </label>
+                </div>
+                <label>
+                  <span>Email</span>
+                  <input type="email" name="signupEmail" maxlength="120" placeholder="name@example.com" required>
+                </label>
+                <label>
+                  <span>Password</span>
+                  <input type="password" name="signupPassword" maxlength="80" placeholder="Create password" required>
+                </label>
+              </div>
+              <button class="ghost-button block-button" type="submit">Create Profile</button>
+            </form>
+
+            <div class="support-form session-card">
+              <div class="panel-headline">
+                <h3>Current Session</h3>
+              </div>
+              <div class="support-form-body">
+                <p class="session-line" id="session-status">No profile signed in</p>
+                <p class="session-line muted" id="session-detail">Sign in to access your own transactions, budgets, goals, and history.</p>
+              </div>
+              <button class="ghost-button block-button" id="signout-button" type="button">Sign Out</button>
+            </div>
           </div>
 
           <div class="setup-grid">

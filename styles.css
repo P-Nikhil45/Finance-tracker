@@ -272,7 +272,8 @@ body[data-theme="dark"] .status-pill.warning {
 .goals-layout,
 .mini-grid,
 .sub-panels,
-.setup-grid {
+.setup-grid,
+.auth-grid {
   display: grid;
   gap: 16px;
 }
@@ -327,8 +328,13 @@ body[data-theme="dark"] .status-pill.warning {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.auth-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .setup-grid > .support-form,
 .sub-panels > .support-form,
+.auth-grid > .support-form,
 .form-row > label {
   min-width: 0;
 }
@@ -369,6 +375,21 @@ body[data-theme="dark"] .status-pill.warning {
 
 .support-spacer {
   min-height: 58px;
+}
+
+.session-card {
+  align-self: stretch;
+}
+
+.session-line {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.session-line.muted {
+  color: var(--muted);
 }
 
 .form-message {
@@ -592,6 +613,7 @@ select:focus {
   .report-grid,
   .sub-panels,
   .setup-grid,
+  .auth-grid,
   .activity-toolbar,
   .activity-filters,
   .goals-layout {

@@ -1,5 +1,8 @@
-INSERT INTO app_user (full_name, email, base_currency)
-VALUES ('Team Bravo Demo User', 'team.bravo@example.com', 'INR');
+INSERT INTO app_user (login_name, full_name, email, password_hash, base_currency, profile_status)
+VALUES ('nikhil', 'Pusapati Nikhil', 'nikhil@example.com', 'demo_hash_nikhil', 'INR', 'ACTIVE');
+
+INSERT INTO app_user (login_name, full_name, email, password_hash, base_currency, profile_status)
+VALUES ('abhijay', 'Abhijay N S', 'abhijay@example.com', 'demo_hash_abhijay', 'INR', 'ACTIVE');
 
 INSERT INTO category (category_name, category_type, default_monthly_limit, is_system_generated) VALUES ('Salary', 'INCOME', NULL, 'Y');
 INSERT INTO category (category_name, category_type, default_monthly_limit, is_system_generated) VALUES ('Freelance', 'INCOME', NULL, 'Y');
