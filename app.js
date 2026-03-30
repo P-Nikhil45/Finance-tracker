@@ -2,7 +2,7 @@ const STORAGE_KEY = "bravo-finance-tracker-v3";
 const THEME_KEY = "bravo-finance-theme";
 const API_BASE = window.__FINANCE_API__ || "http://localhost:8080/api";
 
-const createWorkspace = () => ({ accounts: [], categories: [], budgets: [], goals: [], transactions: [] });
+const createWorkspace = () => ({ accounts: [], categories: [], transactions: [] });
 const createData = () => ({
   user: { id: null, name: "", username: "", email: "", currency: "INR" },
   ...createWorkspace()
@@ -29,13 +29,9 @@ const elements = {
   userBadge: document.getElementById("user-badge"),
   heroBalance: document.getElementById("hero-balance"),
   heroCaption: document.getElementById("hero-caption"),
-  budgetPulseCaption: document.getElementById("budget-pulse-caption"),
-  budgetPulseList: document.getElementById("budget-pulse-list"),
   transactionList: document.getElementById("transaction-list"),
   transactionCount: document.getElementById("transaction-count"),
   transactionForm: document.getElementById("transaction-form"),
-  budgetForm: document.getElementById("budget-form"),
-  goalForm: document.getElementById("goal-form"),
   profileForm: document.getElementById("profile-form"),
   accountForm: document.getElementById("account-form"),
   categoryForm: document.getElementById("category-form"),
@@ -47,7 +43,6 @@ const elements = {
   metricCardTemplate: document.getElementById("metric-card-template"),
   transactionCategory: document.getElementById("transaction-category"),
   transactionAccount: document.getElementById("transaction-account"),
-  budgetCategory: document.getElementById("budget-category"),
   transactionHelper: document.getElementById("transaction-helper"),
   themeToggle: document.getElementById("theme-toggle"),
   filterType: document.getElementById("filter-type"),
@@ -89,8 +84,6 @@ function bindEvents() {
   elements.accountForm.addEventListener("submit", handleAccountSubmit);
   elements.categoryForm.addEventListener("submit", handleCategorySubmit);
   elements.transactionForm.addEventListener("submit", handleTransactionSubmit);
-  elements.budgetForm.addEventListener("submit", handleBudgetSubmit);
-  elements.goalForm.addEventListener("submit", handleGoalSubmit);
   elements.reportMonth.addEventListener("change", render);
   elements.transactionForm.transactionType.addEventListener("change", () => {
     syncCategoryOptions();
@@ -121,8 +114,6 @@ function setDefaultDates() {
   const monthValue = isoDate.slice(0, 7);
   elements.transactionForm.transactionDate.value = isoDate;
   elements.reportMonth.value = monthValue;
-  elements.budgetForm.budgetMonth.value = monthValue;
-  elements.goalForm.targetDate.value = new Date(today.getFullYear(), today.getMonth() + 4, today.getDate()).toISOString().slice(0, 10);
 }
 
 function hydrateProfileForm() {
@@ -167,8 +158,6 @@ function persistLocalState() {
     state.store.workspaces[String(state.data.user.id)] = {
       accounts: state.data.accounts,
       categories: state.data.categories,
-      budgets: state.data.budgets,
-      goals: state.data.goals,
       transactions: state.data.transactions
     };
   }
@@ -309,80 +298,10 @@ async function handleTransactionSubmit(event) {
   }
 }
 
-async function handleBudgetSubmit(event) {
-  event.preventDefault();
-  if (!isSignedIn()) return window.alert("Sign in first to add budget rules.");
-  const formData = new FormData(event.currentTarget);
-  const payload = {
-    categoryId: Number(formData.get("categoryId")),
-    month: formData.get("budgetMonth"),
-    limit: Number(formData.get("budgetLimit")),
-    warningPercent: Number(formData.get("warningPercent"))
-  };
-
-  try {
-    if (state.source === "oracle") {
-      await postToApi("/budgets", { userId: state.data.user.id, ...payload });
-      state.data = normalizeIncomingState(await fetchBootstrap());
-    } else {
-      addLocalBudget(payload);
-    }
-    event.currentTarget.reset();
-    setDefaultDates();
-    render();
-  } catch (error) {
-    window.alert(error.message);
-  }
-}
-
-async function handleGoalSubmit(event) {
-  event.preventDefault();
-  if (!isSignedIn()) return window.alert("Sign in first to add goals.");
-  const formData = new FormData(event.currentTarget);
-  const payload = {
-    name: String(formData.get("goalName")).trim(),
-    targetAmount: Number(formData.get("targetAmount")),
-    targetDate: formData.get("targetDate")
-  };
-
-  try {
-    if (state.source === "oracle") {
-      await postToApi("/goals", { userId: state.data.user.id, ...payload });
-      state.data = normalizeIncomingState(await fetchBootstrap());
-    } else {
-      addLocalGoal(payload);
-    }
-    event.currentTarget.reset();
-    setDefaultDates();
-    render();
-  } catch (error) {
-    window.alert(error.message);
-  }
-}
-
 function addLocalTransaction(payload) {
   ensureTransactionSetup(payload.type, payload.categoryId, payload.accountId);
-  if (payload.type === "EXPENSE") enforceBudgetRule(payload);
   state.data.transactions.unshift({ id: nextId(state.data.transactions), ...payload });
   recalculateAccountBalances();
-  persistLocalState();
-}
-
-function addLocalBudget(payload) {
-  const category = findCategory(payload.categoryId);
-  if (!category || category.type !== "EXPENSE") throw new Error("Select a valid expense category before creating a budget rule.");
-  const existing = state.data.budgets.find((budget) => budget.categoryId === payload.categoryId && budget.month === payload.month);
-  if (existing) {
-    existing.limit = payload.limit;
-    existing.warningPercent = payload.warningPercent;
-  } else {
-    state.data.budgets.unshift({ id: nextId(state.data.budgets), ...payload });
-  }
-  persistLocalState();
-}
-
-function addLocalGoal(payload) {
-  state.data.goals.unshift({ id: nextId(state.data.goals), name: payload.name, targetAmount: payload.targetAmount, currentAmount: 0, targetDate: payload.targetDate, status: "ACTIVE" });
   persistLocalState();
 }
 
@@ -394,16 +313,6 @@ function ensureTransactionSetup(type, categoryId, accountId) {
   if (category.type !== type) throw new Error("Transaction type must match the selected category.");
 }
 
-function enforceBudgetRule(transaction) {
-  const monthKey = transaction.date.slice(0, 7);
-  const budget = state.data.budgets.find((entry) => entry.categoryId === transaction.categoryId && entry.month === monthKey);
-  if (!budget) return;
-  const existingSpend = state.data.transactions
-    .filter((entry) => entry.type === "EXPENSE" && entry.categoryId === transaction.categoryId && entry.date.startsWith(monthKey))
-    .reduce((total, entry) => total + entry.amount, 0);
-  if (existingSpend + transaction.amount > budget.limit) throw new Error("This expense crosses the monthly budget limit configured for that category.");
-}
-
 function render() {
   hydrateProfileForm();
   populateSelects();
@@ -412,7 +321,6 @@ function render() {
   updateTransactionFormState();
   renderHeader();
   renderMetrics();
-  renderBudgetPulse();
   renderReport();
   renderTransactions();
 }
@@ -423,16 +331,14 @@ function updateAuthState() {
   elements.sessionStatus.textContent = signedIn ? `Signed in as ${activeUser.username}` : "No profile signed in";
   elements.sessionDetail.textContent = signedIn
     ? `${activeUser.email} | This profile has its own separate history.`
-    : "Create a profile or sign in to access your own accounts, budgets, goals, and transactions.";
+    : "Create a profile or sign in to access your own accounts and transactions.";
   elements.signOutButton.disabled = !signedIn;
 
   [
     elements.profileForm,
     elements.accountForm,
     elements.categoryForm,
-    elements.transactionForm,
-    elements.budgetForm,
-    elements.goalForm
+    elements.transactionForm
   ].forEach((form) => setFormDisabled(form, !signedIn));
 }
 
@@ -448,11 +354,6 @@ function populateSelects() {
     elements.transactionAccount,
     state.data.accounts.map((account) => ({ value: account.id, label: `${account.name} (${account.type})` })),
     isSignedIn() ? "Add an account first" : "Sign in first"
-  );
-  hydrateSelect(
-    elements.budgetCategory,
-    getExpenseCategories().map((category) => ({ value: category.id, label: category.name })),
-    isSignedIn() ? "Add an expense category first" : "Sign in first"
   );
 }
 
@@ -516,9 +417,6 @@ function updateTransactionFormState() {
     elements.transactionHelper.textContent = "Add at least one account and a matching category to unlock transaction entry.";
     elements.transactionHelper.className = "form-message is-warning";
   }
-
-  elements.budgetForm.querySelector('button[type="submit"]').disabled = !signedIn || getExpenseCategories().length === 0;
-  elements.goalForm.querySelector('button[type="submit"]').disabled = !signedIn;
 }
 
 function renderHeader() {
@@ -543,7 +441,7 @@ function renderMetrics() {
     { label: "Monthly Income", value: formatCurrency(overview.monthlyIncome), footnote: "Only for the signed-in user" },
     { label: "Monthly Expenses", value: formatCurrency(overview.monthlyExpenses), footnote: "Only for the signed-in user" },
     { label: "Savings Rate", value: `${overview.savingsRate}%`, footnote: "Calculated from the active profile history" },
-    { label: "Active Goals", value: String(state.data.goals.filter((goal) => goal.status === "ACTIVE").length), footnote: "Goals linked to the current profile" }
+    { label: "Total Balance", value: formatCurrency(overview.totalBalance), footnote: "Across all your accounts" }
   ];
   elements.metricsGrid.innerHTML = "";
   cards.forEach((card) => {
@@ -555,23 +453,13 @@ function renderMetrics() {
   });
 }
 
-function renderBudgetPulse() {
-  const budgets = getBudgetUsage(getSelectedMonth()).slice(0, 3);
-  elements.budgetPulseCaption.textContent = `${budgets.length} tracked categories`;
-  elements.budgetPulseList.innerHTML = budgets.length
-    ? budgets.map(renderBudgetPulseItem).join("")
-    : renderEmptyState(isSignedIn() ? "No budget rules saved for this month yet." : "Sign in to see budget status.");
-}
-
 function renderReport() {
   const overview = calculateOverview(getSelectedMonth());
-  const categories = getBudgetUsage(getSelectedMonth());
-  const topExpense = [...categories].sort((left, right) => right.spent - left.spent)[0];
   const reportItems = [
     { label: "Net Position", value: formatCurrency(overview.monthlyIncome - overview.monthlyExpenses) },
-    { label: "Top Expense Category", value: topExpense ? `${topExpense.categoryName} (${formatCurrency(topExpense.spent)})` : "No expense data" },
-    { label: "Budget Utilisation", value: `${Math.min(999, overview.budgetUtilisation)}%` },
-    { label: "Goal Progress", value: `${averageGoalProgress()}% average` }
+    { label: "Monthly Income", value: formatCurrency(overview.monthlyIncome) },
+    { label: "Monthly Expenses", value: formatCurrency(overview.monthlyExpenses) },
+    { label: "Savings Rate", value: `${overview.savingsRate}%` }
   ];
   elements.reportCaption.textContent = `Insights for ${getSelectedMonth()}`;
   elements.reportInsights.innerHTML = reportItems.map((item) => `<div class="report-chip"><span>${item.label}</span><strong>${item.value}</strong></div>`).join("");
@@ -612,19 +500,6 @@ function renderTransactionItem(entry) {
   `;
 }
 
-function renderBudgetPulseItem(budget) {
-  return `
-    <div class="budget-card ${budget.percentUsed >= budget.warningPercent ? "alert" : ""}">
-      <p class="budget-title">${budget.categoryName}</p>
-      <div class="budget-progress"><span style="width: ${Math.min(100, budget.percentUsed)}%"></span></div>
-      <div class="budget-meta">
-        <span>${Math.round(budget.percentUsed)}% used</span>
-        <span>${formatCurrency(budget.limit)}</span>
-      </div>
-    </div>
-  `;
-}
-
 function getFilteredTransactions() {
   if (!isSignedIn()) return [];
   return [...state.data.transactions]
@@ -645,31 +520,12 @@ function calculateOverview(selectedMonth) {
   const monthlyIncome = monthTransactions.filter((entry) => entry.type === "INCOME").reduce((sum, entry) => sum + entry.amount, 0);
   const monthlyExpenses = monthTransactions.filter((entry) => entry.type === "EXPENSE").reduce((sum, entry) => sum + entry.amount, 0);
   const totalBalance = state.data.accounts.reduce((sum, account) => sum + account.currentBalance, 0);
-  const totalBudget = getBudgetUsage(selectedMonth).reduce((sum, entry) => sum + entry.limit, 0);
   return {
     monthlyIncome,
     monthlyExpenses,
     totalBalance,
-    savingsRate: monthlyIncome ? Math.max(0, Math.round(((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100)) : 0,
-    budgetUtilisation: totalBudget ? Math.round((monthlyExpenses / totalBudget) * 100) : 0
+    savingsRate: monthlyIncome ? Math.max(0, Math.round(((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100)) : 0
   };
-}
-
-function getBudgetUsage(selectedMonth) {
-  return state.data.budgets
-    .filter((budget) => budget.month === selectedMonth)
-    .map((budget) => {
-      const spent = state.data.transactions
-        .filter((entry) => entry.type === "EXPENSE" && entry.categoryId === budget.categoryId && entry.date.startsWith(selectedMonth))
-        .reduce((sum, entry) => sum + entry.amount, 0);
-      return { ...budget, spent, percentUsed: budget.limit ? (spent / budget.limit) * 100 : 0, categoryName: findCategory(budget.categoryId)?.name || "Unknown" };
-    });
-}
-
-function averageGoalProgress() {
-  if (!state.data.goals.length) return 0;
-  const total = state.data.goals.reduce((sum, goal) => sum + ((goal.currentAmount / goal.targetAmount) * 100), 0);
-  return Math.round(total / state.data.goals.length);
 }
 
 function recalculateAccountBalances() {
@@ -702,21 +558,6 @@ function normalizeIncomingState(payload) {
       name: category.name || category.category_name,
       type: category.type || category.category_type,
       defaultLimit: Number(category.defaultLimit ?? category.default_monthly_limit ?? 0)
-    })) : [],
-    budgets: Array.isArray(payload.budgets) ? payload.budgets.map((budget) => ({
-      id: budget.id || budget.budget_id,
-      categoryId: budget.categoryId || budget.category_id,
-      month: (budget.month || budget.budget_month_key || "").toString().slice(0, 7),
-      limit: Number(budget.limit ?? budget.budget_limit ?? 0),
-      warningPercent: Number(budget.warningPercent ?? budget.warning_percent ?? 80)
-    })) : [],
-    goals: Array.isArray(payload.goals) ? payload.goals.map((goal) => ({
-      id: goal.id || goal.goal_id,
-      name: goal.name || goal.goal_name,
-      targetAmount: Number(goal.targetAmount ?? goal.target_amount ?? 0),
-      currentAmount: Number(goal.currentAmount ?? goal.current_amount ?? 0),
-      targetDate: (goal.targetDate || goal.target_date || "").toString().slice(0, 10),
-      status: goal.status || "ACTIVE"
     })) : [],
     transactions: Array.isArray(payload.transactions) ? payload.transactions.map((entry) => ({
       id: entry.id || entry.transaction_id,
@@ -772,10 +613,6 @@ function findCategory(categoryId) {
 
 function findAccount(accountId) {
   return state.data.accounts.find((account) => account.id === Number(accountId));
-}
-
-function getExpenseCategories() {
-  return state.data.categories.filter((category) => category.type === "EXPENSE");
 }
 
 function getSelectedMonth() {

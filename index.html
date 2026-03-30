@@ -46,14 +46,6 @@
         <div class="metrics-grid" id="metrics-grid"></div>
 
         <div class="mini-grid">
-          <article class="mini-panel">
-            <div class="panel-headline">
-              <h3>Budget Pulse</h3>
-              <span id="budget-pulse-caption">0 categories</span>
-            </div>
-            <div id="budget-pulse-list" class="stack-list"></div>
-          </article>
-
           <article class="mini-panel" id="report-panel">
             <div class="panel-headline">
               <h3>Monthly Report</h3>
@@ -138,7 +130,7 @@
               </div>
               <div class="support-form-body">
                 <p class="session-line" id="session-status">No profile signed in</p>
-                <p class="session-line muted" id="session-detail">Sign in to access your own transactions, budgets, goals, and history.</p>
+                <p class="session-line muted" id="session-detail">Sign in to access your own transactions and history.</p>
               </div>
               <button class="ghost-button block-button" id="signout-button" type="button">Sign Out</button>
             </div>
@@ -273,59 +265,6 @@
 
           <button class="primary-button block-button" type="submit">Save Transaction</button>
         </form>
-
-        <div class="sub-panels">
-          <form id="budget-form" class="support-form">
-            <div class="panel-headline">
-              <h3>Budget Rule</h3>
-            </div>
-            <div class="support-form-body">
-              <label>
-                <span>Category</span>
-                <select name="categoryId" id="budget-category" required></select>
-              </label>
-              <div class="form-row budget-row">
-                <label>
-                  <span>Month</span>
-                  <input type="month" name="budgetMonth" required>
-                </label>
-                <label>
-                  <span>Limit</span>
-                  <input type="number" name="budgetLimit" min="1" step="0.01" required>
-                </label>
-              </div>
-              <label>
-                <span>Warning Threshold %</span>
-                <input type="number" name="warningPercent" min="1" max="100" value="80" required>
-              </label>
-            </div>
-            <button class="ghost-button block-button" type="submit">Save Budget</button>
-          </form>
-
-          <form id="goal-form" class="support-form">
-            <div class="panel-headline">
-              <h3>Savings Goal</h3>
-            </div>
-            <div class="support-form-body">
-              <label>
-                <span>Goal Name</span>
-                <input type="text" name="goalName" maxlength="80" placeholder="Emergency Fund" required>
-              </label>
-              <div class="form-row">
-                <label>
-                  <span>Target Amount</span>
-                  <input type="number" name="targetAmount" min="1" step="0.01" required>
-                </label>
-                <label>
-                  <span>Target Date</span>
-                  <input type="date" name="targetDate" required>
-                </label>
-              </div>
-              <div class="support-spacer"></div>
-            </div>
-            <button class="ghost-button block-button" type="submit">Add Goal</button>
-          </form>
-        </div>
       </section>
 
       <section class="panel ledger-panel">
